@@ -7,7 +7,7 @@
 #define MAX_STATES 255                 // Maximum number of states allowed
 #define MAX_TRANSITIONS_PER_STATE 255  // Maximum transitions per state
 #define STATE_NAME_LEN 50              // Maximum length for state names
-#define MAX_INPUT 2048
+#define MAX_INPUT MAX_STATES*MAX_TRANSITIONS_PER_STATE
 
 // Structure to represent a transition rule
 typedef struct {

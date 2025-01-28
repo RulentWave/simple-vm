@@ -1,120 +1,252 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
-//Machine state definitions:
-#define NONE 'n'
-#define LEFT 'l'
-#define RIGHT 'r'
-#define MAXSTATES 200
+#include <string.h>
+#include <readline/readline.h>
 
-//Symbol definitions
-#define BLANK ' '
+// Define maximum limits for our Turing machine components
+#define MAX_STATES 255                 // Maximum number of states allowed
+#define MAX_TRANSITIONS_PER_STATE 255  // Maximum transitions per state
+#define STATE_NAME_LEN 50              // Maximum length for state names
+#define MAX_INPUT 2048
 
-//Table instructions
-#define WRITE 0
-#define MOVE 1
-#define SET 2
-struct Cell {
-	struct Cell* prev;
-	char this;
-	struct Cell* next;
-};
-struct Machine{
-	int numstates;
-	char table[MAXSTATES][2];
-	int currentstate;
-	struct Cell* currentcellptr;
-};
-struct Cell* cell_append(struct Cell* currentptr){
-	while (currentptr != NULL){
-		currentptr = currentptr->next;
-	}
-	currentptr->next = malloc(sizeof(struct Cell));
-	currentptr->next->next = NULL;
-	currentptr->next->prev = currentptr;
-	currentptr->next->this = BLANK;
-	return currentptr->next;
-}
-void tape_free(struct Cell* currentptr){
-	while (currentptr->prev != NULL){
-		currentptr = currentptr->prev;
-	}
-	while (currentptr->next != NULL){
-		currentptr = currentptr->next;
-		free(currentptr->prev);
-	}
-	free(currentptr);
-}
-struct Cell* tape_constructor (){
-	struct Cell* firstcell = malloc(sizeof(struct Cell));
-	firstcell->prev = NULL;
-	firstcell->next = NULL;
-	firstcell->this = BLANK;
-	return firstcell;
+// Structure to represent a transition rule
+typedef struct {
+    char read;                   // Symbol to read from tape
+    char write;                  // Symbol to write to tape
+    char direction;              // Movement direction (L/R/S for Left/Right/Stay)
+    char next_state[STATE_NAME_LEN];  // State to transition to
+} Transition;
+
+// Structure to represent a state with its transitions
+typedef struct {
+    char name[STATE_NAME_LEN];         // Name of the state
+    Transition transitions[MAX_TRANSITIONS_PER_STATE];  // List of transitions
+    int num_transitions;               // Current number of transitions
+} State;
+
+// Structure for a cell in our tape (doubly linked list implementation)
+typedef struct Cell {
+    char symbol;            // Character stored in this cell
+    struct Cell *left;      // Pointer to cell to the left
+    struct Cell *right;     // Pointer to cell to the right
+} Cell;
+
+// Structure to manage the entire tape
+typedef struct {
+    Cell *head;             // Current position of the head
+    Cell *leftmost;         // Leftmost cell in the tape
+    Cell *rightmost;        // Rightmost cell in the tape
+} Tape;
+
+// Function to free all memory allocated for the tape
+void free_tape(Tape *tape) {
+    Cell *current = tape->leftmost;
+    while (current) {
+        Cell *next = current->right;  // Save next pointer before freeing
+        free(current);
+        current = next;
+    }
 }
 
-struct Cell* tape_intake(struct Cell* currentptr){
-	char input;
-	while (read(STDIN_FILENO, &input, 1) > 0){
-		currentptr->this = input;
-		currentptr = cell_append(currentptr);
-		}
-	while (currentptr->prev != NULL){
-		currentptr = currentptr->prev;
-	}
-	return currentptr;
-	
-}
-struct Machine getstates(struct Cell* currentptr){
-	struct Machine machine;
-	machine.numstates = 0;
-	machine.currentstate = 0;
-	machine.currentcellptr = currentptr;
+int main() {
+    char *input = readline("Enter Turing machine description: ");
+    //fgets(input, sizeof(input), stdin);   // Get user input
+    //input[strcspn(input, "\n")] = 0;      // Remove newline character
 
-	
-	while (currentptr->next != NULL){
-		if (currentptr->this == BLANK){ //count the number of states and assign the WRITE MOVE SET table for that state
-		machine.table [machine.numstates] [WRITE] = currentptr->next->this;	
-		machine.table [machine.numstates] [MOVE] = currentptr->next->next->this;
-		machine.table [machine.numstates] [SET] = currentptr->next->next->next->this;
-		machine.numstates++;
-		}
-		if (machine.numstates == MAXSTATES)
-			break;
-		currentptr = currentptr->next;
-	}
+    // Split input into three parts using | as delimiter
+    char *initial_tape = strtok(input, "|");      // Get initial tape configuration
+    char *start_state = strtok(NULL, "|");        // Get starting state
+    char *transitions_part_ptr = strtok(NULL, "|");   // Get transitions section
 
-	return machine;
+    // Validate input format
+    if (!initial_tape || !start_state || !transitions_part_ptr) {
+        fprintf(stderr, "Invalid input format\n");
+        return 1;
+    }
 
+    // Array to store all states
+    State states[MAX_STATES];
+    int num_states = 0;
 
-}
+    // Parse transitions section into individual transition rules
+    char  transitions_part[MAX_INPUT];
+    strncpy(transitions_part,transitions_part_ptr,MAX_INPUT);
+    printf("transitions part before strtok: %s\n", transitions_part);
+    int refcount = 0;
+    char* transition[MAX_INPUT] = {NULL};
+    transition[refcount] = strtok(transitions_part_ptr,";");
+    while(transition[refcount]) {
+    refcount++;
+    transition[refcount] = strtok(NULL,";");
+    }
 
-struct Machine transition(struct Machine machine){
-	machine.currentcellptr->this = machine.table [machine.currentstate] [WRITE];
-	machine.currentstate = machine.table [machine.currentstate] [SET];
-	switch (machine.table [machine.currentstate] [MOVE]){
-		case LEFT:
-			machine.currentcellptr = machine.currentcellptr->prev;
-			break;
-		case RIGHT:
-			machine.currentcellptr = machine.currentcellptr->next;
-			break;
-		default:
-			break;
-	}
+    
+    for (int z = 0; z < refcount; z++) {
+        // Split transition into components using , as delimiter
+        char *current_state = strtok(transition[z], ",");
+        char *read_symbol = strtok(NULL, ",");
+        char *write_symbol = strtok(NULL, ",");
+        char *direction = strtok(NULL, ",");
+        char *next_state = strtok(NULL, ",");
 
+        // Validate transition format
+        if (!current_state || !read_symbol || !write_symbol || !direction || !next_state) {
+            fprintf(stderr, "Invalid transition: %s\n", transition[z]);
+            return 1;
+        }
+        printf("Creating transition %s,%s,%s,%s,%s\n",current_state,read_symbol,write_symbol,direction,next_state);
 
-}
+        // Check if we already have this state in our list
+        int found = 0;
+        for (int i = 0; i <= num_states; i++) {
+            printf("the number of states are: %d\n",num_states);
+            printf("The following states are generated: %s\n",states[i].name);
+            if (strcmp(states[i].name, current_state) == 0) {
+                // Update existing state's transitions
+                printf("transition found. Updating...\n");
+                int j;
+                for (j = 0; j < states[i].num_transitions; j++) {
+                    // Check if transition for this symbol already exists
+                    if (states[i].transitions[j].read == *read_symbol) {
+                        // Update existing transition
+                        states[i].transitions[j].write = *write_symbol;
+                        states[i].transitions[j].direction = *direction;
+                        strncpy(states[i].transitions[j].next_state, next_state, STATE_NAME_LEN);
+                        break;
+                    }
+                }
+                if (j == states[i].num_transitions) {
+                    if (states[i].num_transitions >= MAX_TRANSITIONS_PER_STATE) {
+                        fprintf(stderr, "Too many transitions for state %s\n", current_state);
+                        return 1;
+                    }
+                    Transition t = {*read_symbol, *write_symbol, *direction};
+                    strncpy(t.next_state, next_state, STATE_NAME_LEN);
+                    states[i].transitions[states[i].num_transitions++] = t;
+                }
+                found = 1;
+                break;
+            }
+        }
 
+        // If state doesn't exist, create new state
+        if (!found) {
+            if (num_states >= MAX_STATES) {
+                fprintf(stderr, "Too many states\n");
+                return 1;
+            }
+            // Initialize new state
+            printf("state doesn't exist. Creating...\n");
+            State new_state;
+            strncpy(new_state.name, current_state, STATE_NAME_LEN);
+            new_state.num_transitions = 0;
+            // Create first transition for this state
+            Transition t = {*read_symbol, *write_symbol, *direction};
+            strncpy(t.next_state, next_state, STATE_NAME_LEN);
+            new_state.transitions[new_state.num_transitions++] = t;
+            states[num_states++] = new_state;
+            printf("There are %d many states created\n", num_states);
+        }
 
+        printf("transition var string: %s\n",transition[z]);
+        printf("transitions_part string: %s\n",transitions_part);
+    }
 
+    // Initialize tape using doubly linked list
+    Tape tape = {0};
+    Cell *prev = NULL;
+    for (int i =0; initial_tape[i] != '\0'; i++){
+        // Create new cell for each character in initial tape
+        Cell *cell = malloc(sizeof(Cell));
+        cell->symbol = initial_tape[i];
+        cell->left = prev;
+        cell->right = NULL;
+        
+        // Link previous cell to new cell
+        if (prev) 
+            prev->right = cell;
+        else  // First cell becomes leftmost
+            tape.leftmost = cell;
+        
+        prev = cell;
+    }
+    tape.rightmost = prev;   // Last cell becomes rightmost
+    tape.head = tape.leftmost;  // Start at leftmost cell
 
-int main () {
-	struct Cell* firstcellptr = tape_intake(tape_constructor());
-	struct Machine machine = getstates(firstcellptr);
-	while (machine.currentstate != machine.numstates){
-		machine = transition(machine);
-	}
+    // Initialize current state with start state
+    char current_state[STATE_NAME_LEN];
+    strcpy(current_state, start_state);
 
-	tape_free(firstcellptr);
+    // Main Turing machine simulation loop
+    while (1) {
+        // Find current state in our states array
+        State *cur_state = NULL;
+        for (int i = 0; i < num_states; i++) {
+            if (strcmp(states[i].name, current_state) == 0) {
+                cur_state = &states[i];
+                break;
+            }
+        }
+        if (!cur_state){ printf("No state found. halting..\n"); break;}  // Halt if state not found
+
+        // Get current symbol under head
+        char read = tape.head->symbol;
+        printf("reading symbol %c\n",read);
+        Transition *t = NULL;
+        
+        // Find matching transition for current symbol
+        printf("%d\n",cur_state->num_transitions);
+        for (int i = 0; i < cur_state->num_transitions; i++) {
+            if (cur_state->transitions[i].read == read) {
+                t = &(cur_state->transitions[i]);
+                printf("Found matching transition for symbol!\n");
+                break;
+            }
+        }
+        if (!t){printf("No matching transition. Halting...\n"); break;}  // Halt if no matching transition
+
+        // Execute transition: write symbol to tape
+       // printf("turning %s into %s",tape.head->symbol,t->write);
+        tape.head->symbol = t->write;
+
+        // Move tape head according to direction
+        if (t->direction == 'L') {  // Move left
+            if (!tape.head->left) {  // Expand tape if needed
+                Cell *new_cell = malloc(sizeof(Cell));
+                new_cell->symbol = 'B';  // Use 'B' as blank symbol
+                new_cell->right = tape.head;
+                new_cell->left = NULL;
+                tape.head->left = new_cell;
+                tape.leftmost = new_cell;  // Update leftmost pointer
+            }
+            tape.head = tape.head->left;
+        } else if (t->direction == 'R') {  // Move right
+            if (!tape.head->right) {  // Expand tape if needed
+                Cell *new_cell = malloc(sizeof(Cell));
+                new_cell->symbol = 'B';  // Use 'B' as blank symbol
+                new_cell->left = tape.head;
+                new_cell->right = NULL;
+                tape.head->right = new_cell;
+                tape.rightmost = new_cell;  // Update rightmost pointer
+            }
+            tape.head = tape.head->right;
+        }
+
+        // Transition to next state
+        strcpy(current_state, t->next_state);
+    }
+
+    // Print final tape configuration from left to right
+    Cell *current = tape.leftmost;
+    while (current) {
+        putchar(current->symbol);
+        current = current->right;
+    }
+    putchar('\n');
+
+    // Clean up allocated memory
+    free_tape(&tape);
+    free(input);
+
+    return 0;
 }

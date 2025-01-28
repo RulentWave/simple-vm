@@ -47,9 +47,57 @@ void free_tape(Tape *tape) {
         current = next;
     }
 }
+char* read_stdin(void) {
+    // Initial buffer size
+    size_t buffer_size = 1024;
+    size_t content_size = 0;
+    char* buffer = malloc(buffer_size);
+    
+    if (buffer == NULL) {
+        fprintf(stderr, "Failed to allocate initial buffer\n");
+        return NULL;
+    }
 
+    // Read chunks until EOF
+    char chunk[128];
+    while (fgets(chunk, sizeof(chunk), stdin) != NULL) {
+        size_t chunk_len = strlen(chunk);
+        
+        // Ensure buffer is large enough
+        if (content_size + chunk_len + 1 > buffer_size) {
+            buffer_size *= 2;
+            char* new_buffer = realloc(buffer, buffer_size);
+            
+            if (new_buffer == NULL) {
+                fprintf(stderr, "Failed to reallocate buffer\n");
+                free(buffer);
+                return NULL;
+            }
+            
+            buffer = new_buffer;
+        }
+        
+        // Copy chunk to buffer
+        memcpy(buffer + content_size, chunk, chunk_len);
+        content_size += chunk_len;
+    }
+
+    // Check for read errors
+    if (ferror(stdin)) {
+        fprintf(stderr, "Error reading from stdin\n");
+        free(buffer);
+        return NULL;
+    }
+
+    // Ensure null termination
+    buffer[content_size] = '\0';
+    
+    // Shrink buffer to actual size
+    char* final_buffer = realloc(buffer, content_size + 1);
+    return final_buffer ? final_buffer : buffer;
+}
 int main() {
-    char *input = readline("Enter Turing machine description: ");
+    char *input = read_stdin();
     //fgets(input, sizeof(input), stdin);   // Get user input
     //input[strcspn(input, "\n")] = 0;      // Remove newline character
 
@@ -69,9 +117,6 @@ int main() {
     int num_states = 0;
 
     // Parse transitions section into individual transition rules
-    char  transitions_part[MAX_INPUT];
-    strncpy(transitions_part,transitions_part_ptr,MAX_INPUT);
-    printf("transitions part before strtok: %s\n", transitions_part);
     int refcount = 0;
     char* transition[MAX_INPUT] = {NULL};
     transition[refcount] = strtok(transitions_part_ptr,";");
@@ -149,7 +194,6 @@ int main() {
         }
 
         printf("transition var string: %s\n",transition[z]);
-        printf("transitions_part string: %s\n",transitions_part);
     }
 
     // Initialize tape using doubly linked list

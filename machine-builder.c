@@ -214,7 +214,9 @@ machine_t* create_machine_from_toml(char* inputbuf) {
     for (int i = 0; i < machine->num_states; i++){
         for (int j = 0; j < machine->states[i].num_transitions; j++) {
             for (int k = 0; k < machine->num_states; k++){
+                if(strcmp(machine->states[k].name, machine->states[i].transitions[j].next_state_name) == 0) {
                 machine->states[i].transitions[j].next_state = &(machine->states[k]);
+                }
 
          }
        }

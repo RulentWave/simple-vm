@@ -17,7 +17,7 @@ int main() {
 
         // Get current symbol under head
         char read = machine->tape.head->symbol;
-//        printf("reading symbol %c\n",read);
+        printf("reading symbol %c\n",read);
         transition_t *t = NULL;
         
         // Find matching transition for current symbol
@@ -27,7 +27,7 @@ int main() {
         for (int i = 0; i < machine->current_state->num_transitions; i++) {
             if (machine->current_state->transitions[i].read == read) {
                 t = &(machine->current_state->transitions[i]);
- //               printf("Found matching transition for symbol!\n");
+                //printf("Found matching transition for symbol!\n");
                 break;
             }
         }
@@ -38,11 +38,13 @@ int main() {
 
         // Move tape head according to direction
         if (t->direction == 'L') {  // Move left
+            //printf("moveing left..\n");
             if (!machine->tape.head->left) {  // Expand tape if needed
                 add_cell_to_tape(&machine->tape,t->direction);
             }
             machine->tape.head = machine->tape.head->left;
         } else if (t->direction == 'R') {  // Move right
+            //printf("moveing right..\n");
             if (!machine->tape.head->right) {  // Expand tape if needed
                 add_cell_to_tape(&machine->tape,t->direction);
             }

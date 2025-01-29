@@ -17,7 +17,7 @@ int main() {
 
         // Get current symbol under head
         char read = machine->tape.head->symbol;
-        printf("reading symbol %c\n",read);
+//        printf("reading symbol %c\n",read);
         transition_t *t = NULL;
         
         // Find matching transition for current symbol

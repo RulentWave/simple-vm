@@ -188,10 +188,9 @@ machine_t* create_machine_from_toml(char* inputbuf) {
             }
 
             // Parse next state
-            toml_value_t next_val = toml_table_string(trans_table, "next_state_name");
+            toml_value_t next_val = toml_table_string(trans_table, "next_state");
             if (next_val.ok && strlen(next_val.u.s) < STATE_NAME_LEN) {
                 strncpy(trans.next_state_name, next_val.u.s, STATE_NAME_LEN);
-                trans.next_state = state;
                 free(next_val.u.s);
             }
 
@@ -200,11 +199,14 @@ machine_t* create_machine_from_toml(char* inputbuf) {
             }
         }
     }
-    //Assign current state
+
+    //For every transition rule, next_state will point to NULL if the transition's next_state_name doesn't refer to a valid state because all transitions are initialized with a NULL pointer for next_state
     for (int i = 0; i < machine->num_states; i++){
-        if (strcmp(machine->states[i].name, machine->initial_state_name) == 0){
-         machine->current_state = &machine->states[i];
-        }
+        for (int j = 0; j < machine->states[i].num_transitions; j++) {
+         if (strcmp (machine->states[i].name, machine->states[i].transitions[j].next_state_name) == 0) {
+            machine->states[i].transitions[j].next_state = &(machine->states[i]);
+         }
+       }
     }
 
     toml_free(root);

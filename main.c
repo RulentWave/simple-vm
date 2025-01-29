@@ -7,11 +7,12 @@
 int main() {
     char *input = read_stdin();
     machine_t *machine = create_machine_from_toml(input);
-    if (!machine){printf("Error building machine\n"); return 1;}
+    if (!machine) {printf("Error building machine\n"); return 1;}
 
     // Main Turing machine simulation loop
     while (true) {
-        if (!machine->current_state){ printf("current_state points to NULL. halting..\n"); break;}  // Halt if state not found
+        if (!machine->current_state){ printf("current_state points to NULL. halting...\n"); break;}  // Halt if state not found
+        if (strcmp(machine->current_state->name, "halt") == 0){ printf("halting...\n"); break;}  // Halt if state not found
 
         // Get current symbol under head
         char read = machine->tape.head->symbol;
@@ -30,7 +31,6 @@ int main() {
         if (!t){printf("No matching transition. Halting...\n"); break;}  // Halt if no matching transition
 
         // Execute transition: write symbol to tape
-       // printf("turning %s into %s",tape.head->symbol,t->write);
         machine->tape.head->symbol = t->write;
 
         // Move tape head according to direction

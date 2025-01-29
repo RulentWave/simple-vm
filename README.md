@@ -4,11 +4,11 @@ This is a simple virual turing machine that takes a description of a turing mach
 initial_tape = "0000011"
 initial_state = "q0"
 [q0]
-0 = {write = "1", direction ="R", next_state = "q0"}
+0 = {write = "1", direction = "R", next_state = "q0"}
 1 = {write = "0", direction = "R", next_state = "q1"}
 
 [q1]
-0 = {write = "1", direction = "R", next_state = "q2"}
+0 = {write = "1", direction = "R", next_state = "q1"}
 1 = {write = "0", direction = "R", next_state = "halt"}
 
 [halt]

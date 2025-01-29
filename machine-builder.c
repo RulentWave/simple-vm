@@ -5,7 +5,7 @@
 #include "machine.h"
 
 // Helper function to initialize the tape from a string
-void initialize_tape(tape_t* tape, const char* symbols) {
+void initialize_tape(tape_t *tape, const char* symbols) {
     if (!symbols || *symbols == '\0') {
         // Create a default blank cell if tape is empty
         cell_t* cell = malloc(sizeof(cell_t));
@@ -83,6 +83,15 @@ void free_tape(tape_t* tape){
 void free_machine(machine_t* machine) {
     free_tape(&(machine->tape));
     free(machine);
+}
+
+void print_tape (tape_t tape) {
+    cell_t *current = tape.leftmost;
+    while (current) {
+        putchar(current->symbol);
+        current = current->right;
+    }
+    putchar ('\n');
 }
 
 
@@ -187,7 +196,7 @@ machine_t* create_machine_from_toml(char* inputbuf) {
                 free(dir_val.u.s);
             }
 
-            // Parse next state
+            // Parse next_state
             toml_value_t next_val = toml_table_string(trans_table, "next_state");
             if (next_val.ok && strlen(next_val.u.s) < STATE_NAME_LEN) {
                 strncpy(trans.next_state_name, next_val.u.s, STATE_NAME_LEN);
@@ -201,10 +210,12 @@ machine_t* create_machine_from_toml(char* inputbuf) {
     }
 
     //For every transition rule, next_state will point to NULL if the transition's next_state_name doesn't refer to a valid state because all transitions are initialized with a NULL pointer for next_state
+
     for (int i = 0; i < machine->num_states; i++){
         for (int j = 0; j < machine->states[i].num_transitions; j++) {
-         if (strcmp (machine->states[i].name, machine->states[i].transitions[j].next_state_name) == 0) {
-            machine->states[i].transitions[j].next_state = &(machine->states[i]);
+            for (int k = 0; k < machine->num_states; k++){
+                machine->states[i].transitions[j].next_state = &(machine->states[k]);
+
          }
        }
     }

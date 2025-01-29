@@ -8,11 +8,12 @@ int main() {
     char *input = read_stdin();
     machine_t *machine = create_machine_from_toml(input);
     if (!machine) {printf("Error building machine\n"); return 1;}
+    print_tape(machine->tape);
 
     // Main Turing machine simulation loop
     while (true) {
         if (!machine->current_state){ printf("current_state points to NULL. halting...\n"); break;}  // Halt if state not found
-        if (strcmp(machine->current_state->name, "halt") == 0){ printf("halting...\n"); break;}  // Halt if state not found
+        if (strcmp(machine->current_state->name, "halt") == 0){ printf("halting...\n"); break;}  // Halt if state name is "halt"
 
         // Get current symbol under head
         char read = machine->tape.head->symbol;
@@ -20,11 +21,13 @@ int main() {
         transition_t *t = NULL;
         
         // Find matching transition for current symbol
-        printf("%d\n",machine->current_state->num_transitions);
+//        printf("machine->num_states: %d\n", machine->num_states);
+//        printf("current_state->name: %s\n", machine->current_state->name);
+//        printf("current_state->num_transitions %d\n",machine->current_state->num_transitions);
         for (int i = 0; i < machine->current_state->num_transitions; i++) {
             if (machine->current_state->transitions[i].read == read) {
                 t = &(machine->current_state->transitions[i]);
-                printf("Found matching transition for symbol!\n");
+ //               printf("Found matching transition for symbol!\n");
                 break;
             }
         }
@@ -51,12 +54,7 @@ int main() {
     }
 
     // Print final tape configuration from left to right
-    cell_t *current = machine->tape.leftmost;
-    while (current) {
-        putchar(current->symbol);
-        current = current->right;
-    }
-    putchar('\n');
+    print_tape(machine->tape);
 
     // Clean up allocated memory
     free_machine(machine);

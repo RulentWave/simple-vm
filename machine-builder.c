@@ -3,6 +3,46 @@
 #include <string.h>
 #include "toml-c.h"
 #include "machine.h"
+#include "par_map.h"
+void assign_next_state (void* elem_arg_ptr) {
+    par_map_elem_arg_t* args = elem_arg_ptr;
+    transition_t *transition = args->element;
+    machine_t* machine = args->func_arg;
+//    printf("assigning next state..\n");
+    for (int k = 0; k < machine->num_states; k++){
+        printf("trying machine state: %s\n",machine->states[k].name);
+         if(strcmp(machine->states[k].name, transition->next_state_name) == 0) {
+                transition->next_state = &(machine->states[k]);
+         }
+    }
+}
+void process_transitions(void* elem_arg_ptr) {
+    par_map_elem_arg_t* input_args = elem_arg_ptr;
+    state_t *state = input_args->element;
+    machine_t* machine = input_args->func_arg;
+    par_map_args_t args;
+    args.array = state->transitions;
+    args.elem_size = sizeof(transition_t);
+    args.start_idx = 0;
+    args.num_elements = state->num_transitions;
+    args.func = assign_next_state;
+    args.func_arg = machine;
+//    printf("processing transitions for state %s..\n", state->name);
+    par_map(args,2);
+}
+void process_states(machine_t* machine){
+    par_map_args_t args;
+    args.array     = &machine->states;
+    args.elem_size = sizeof(state_t);
+    args.start_idx = 0;
+    args.num_elements = machine->num_states;
+    args.func = process_transitions;
+    args.func_arg = machine;
+//    printf("processing machine...\n");
+    par_map(args,2);
+}
+
+
 
 // Helper function to initialize the tape from a string
 void initialize_tape(tape_t *tape, const char* symbols) {
@@ -211,17 +251,11 @@ machine_t* create_machine_from_toml(char* inputbuf) {
 
     //For every transition rule, next_state will point to NULL if the transition's next_state_name doesn't refer to a valid state because all transitions are initialized with a NULL pointer for next_state
 
-    for (int i = 0; i < machine->num_states; i++){
-        for (int j = 0; j < machine->states[i].num_transitions; j++) {
-            for (int k = 0; k < machine->num_states; k++){
-                if(strcmp(machine->states[k].name, machine->states[i].transitions[j].next_state_name) == 0) {
-                machine->states[i].transitions[j].next_state = &(machine->states[k]);
-                }
-
-         }
-       }
-    }
+    process_states(machine);
 
     toml_free(root);
     return machine;
 }
+
+
+

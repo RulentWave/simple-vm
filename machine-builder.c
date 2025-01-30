@@ -10,7 +10,7 @@ void assign_next_state (void* elem_arg_ptr) {
     machine_t* machine = args->func_arg;
 //    printf("assigning next state..\n");
     for (int k = 0; k < machine->num_states; k++){
-        printf("trying machine state: %s\n",machine->states[k].name);
+//        printf("trying machine state: %s\n",machine->states[k].name);
          if(strcmp(machine->states[k].name, transition->next_state_name) == 0) {
                 transition->next_state = &(machine->states[k]);
          }

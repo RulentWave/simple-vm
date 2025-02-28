@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-void assign_next_state(void *elem_arg_ptr) {
-	par_map_elem_arg_t *args = elem_arg_ptr;
-	transition_t *transition = args->element;
-	machine_t *machine = args->func_arg;
+void assign_next_state(void* elem_arg_ptr) {
+	par_map_elem_arg_t* args = elem_arg_ptr;
+	transition_t* transition = args->element;
+	machine_t* machine = args->func_arg;
 	//    printf("assigning next state..\n");
 	for (int k = 0; k < machine->num_states; k++) {
 		//        printf("trying machine state: %s\n",machine->states[k].name);
@@ -16,10 +16,10 @@ void assign_next_state(void *elem_arg_ptr) {
 		}
 	}
 }
-void process_transitions(void *elem_arg_ptr) {
-	par_map_elem_arg_t *input_args = elem_arg_ptr;
-	state_t *state = input_args->element;
-	machine_t *machine = input_args->func_arg;
+void process_transitions(void* elem_arg_ptr) {
+	par_map_elem_arg_t* input_args = elem_arg_ptr;
+	state_t* state = input_args->element;
+	machine_t* machine = input_args->func_arg;
 	par_map_args_t args;
 	args.array = state->transitions;
 	args.elem_size = sizeof(transition_t);
@@ -30,7 +30,7 @@ void process_transitions(void *elem_arg_ptr) {
 	//    printf("processing transitions for state %s..\n", state->name);
 	par_map(args, 2);
 }
-void process_states(machine_t *machine) {
+void process_states(machine_t* machine) {
 	par_map_args_t args;
 	args.array = &machine->states;
 	args.elem_size = sizeof(state_t);
@@ -43,19 +43,19 @@ void process_states(machine_t *machine) {
 }
 
 // Helper function to initialize the tape from a string
-void initialize_tape(tape_t *tape, const char *symbols) {
+void initialize_tape(tape_t* tape, const char* symbols) {
 	if (!symbols || *symbols == '\0') {
 		// Create a default blank cell if tape is empty
-		cell_t *cell = malloc(sizeof(cell_t));
+		cell_t* cell = malloc(sizeof(cell_t));
 		cell->symbol = '_';
 		cell->left = cell->right = NULL;
 		tape->head = tape->leftmost = tape->rightmost = cell;
 		return;
 	}
 
-	cell_t *prev = NULL;
-	for (const char *c = symbols; *c; c++) {
-		cell_t *new_cell = malloc(sizeof(cell_t));
+	cell_t* prev = NULL;
+	for (const char* c = symbols; *c; c++) {
+		cell_t* new_cell = malloc(sizeof(cell_t));
 		new_cell->symbol = *c;
 		new_cell->left = prev;
 		new_cell->right = NULL;
@@ -71,13 +71,13 @@ void initialize_tape(tape_t *tape, const char *symbols) {
 	tape->head = tape->leftmost;
 }
 
-cell_t *add_cell_to_tape(tape_t *tape, char direction) {
+cell_t* add_cell_to_tape(tape_t* tape, char direction) {
 	if (!tape || (direction != 'L' && direction != 'R')) {
 		return NULL; // Invalid parameters
 	}
 
 	// Create new blank cell
-	cell_t *new_cell = (cell_t *)malloc(sizeof(cell_t));
+	cell_t* new_cell = (cell_t*)malloc(sizeof(cell_t));
 	if (!new_cell) {
 		return NULL; // Memory allocation failed
 	}
@@ -107,21 +107,21 @@ cell_t *add_cell_to_tape(tape_t *tape, char direction) {
 }
 
 // Helper function to clean up machine resources
-void free_tape(tape_t *tape) {
-	cell_t *current = tape->leftmost;
+void free_tape(tape_t* tape) {
+	cell_t* current = tape->leftmost;
 	while (current) {
-		cell_t *next = current->right;
+		cell_t* next = current->right;
 		free(current);
 		current = next;
 	}
 }
-void free_machine(machine_t *machine) {
+void free_machine(machine_t* machine) {
 	free_tape(&(machine->tape));
 	free(machine);
 }
 
 void print_tape(tape_t tape) {
-	cell_t *current = tape.leftmost;
+	cell_t* current = tape.leftmost;
 	while (current) {
 		putchar(current->symbol);
 		current = current->right;
@@ -129,16 +129,16 @@ void print_tape(tape_t tape) {
 	putchar('\n');
 }
 
-machine_t *create_machine_from_toml(char *inputbuf) {
+machine_t* create_machine_from_toml(char* inputbuf) {
 	char errbuf[255];
-	toml_table_t *root = toml_parse(inputbuf, errbuf, sizeof(errbuf));
+	toml_table_t* root = toml_parse(inputbuf, errbuf, sizeof(errbuf));
 
 	if (!root) {
 		fprintf(stderr, "TOML parsing error: %s\n", errbuf);
 		return NULL;
 	}
 
-	machine_t *machine = malloc(sizeof(machine_t));
+	machine_t* machine = malloc(sizeof(machine_t));
 	if (!machine) {
 		toml_free(root);
 		return NULL;
@@ -157,12 +157,14 @@ machine_t *create_machine_from_toml(char *inputbuf) {
 
 	// Parse initial state
 	toml_value_t state_val = toml_table_string(root, "initial_state");
+
 	if (!state_val.ok || strlen(state_val.u.s) >= STATE_NAME_LEN) {
 		fprintf(stderr, "Missing or invalid 'initial_state'\n");
 		free_machine(machine);
 		toml_free(root);
 		return NULL;
 	}
+
 	strncpy(machine->initial_state_name, state_val.u.s, STATE_NAME_LEN);
 	free(state_val.u.s);
 
@@ -170,14 +172,14 @@ machine_t *create_machine_from_toml(char *inputbuf) {
 	int num_keys = toml_table_len(root);
 	for (int i = 0; i < num_keys; i++) {
 		int keylen;
-		const char *key = toml_table_key(root, i, &keylen);
+		const char* key = toml_table_key(root, i, &keylen);
 
 		// Skip special keys
 		if (strcmp(key, "initial_tape") == 0 || strcmp(key, "initial_state") == 0) {
 			continue;
 		}
 
-		toml_table_t *state_table = toml_table_table(root, key);
+		toml_table_t* state_table = toml_table_table(root, key);
 		if (!state_table)
 			continue;
 
@@ -188,7 +190,7 @@ machine_t *create_machine_from_toml(char *inputbuf) {
 			return NULL;
 		}
 
-		state_t *state = &machine->states[machine->num_states++];
+		state_t* state = &machine->states[machine->num_states++];
 		strncpy(state->name, key, STATE_NAME_LEN);
 		state->num_transitions = 0;
 		if (strcmp(machine->initial_state_name, key) == 0) {
@@ -199,13 +201,14 @@ machine_t *create_machine_from_toml(char *inputbuf) {
 		// Parse transitions
 		int num_trans = toml_table_len(state_table);
 		for (int j = 0; j < num_trans; j++) {
-			const char *trans_key = toml_table_key(state_table, j, &keylen);
+			const char* trans_key = toml_table_key(state_table, j, &keylen);
 			if (strlen(trans_key) != 1) {
 				fprintf(stderr, "Invalid transition key in state %s\n", key);
 				continue;
 			}
 
-			toml_table_t *trans_table = toml_table_table(state_table, trans_key);
+			toml_table_t* trans_table = toml_table_table(state_table, trans_key);
+
 			if (!trans_table)
 				continue;
 

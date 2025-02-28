@@ -30,9 +30,10 @@ int main() {
 		transition_t *t = NULL;
 
 		// Find matching transition for current symbol
-		//			printf("machine->num_states: %d\n", machine->num_states);
-		//			printf("current_state->name: %s\n",
-		//machine->current_state->name);			printf("current_state->num_transitions
+		//			printf("machine->num_states: %d\n",
+		// machine->num_states); 			printf("current_state->name: %s\n",
+		// machine->current_state->name);
+		// printf("current_state->num_transitions
 		//			%d\n",machine->current_state->num_transitions);
 		for (int i = 0; i < machine->current_state->num_transitions; i++) {
 			if (machine->current_state->transitions[i].read == read) {
